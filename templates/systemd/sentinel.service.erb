@@ -5,8 +5,14 @@ After=network.target
 [Service]
 <% if @sentinel_user and @sentinel_user != 'root' -%>
 PermissionsStartOnly=true
+<% if @sentinel_run_dir.start_with?("/run/") -%>
+RuntimeDirectory=<%= @sentinel_run_dir.sub(/^\/run\//, "") %>
+<% elsif @sentinel_run_dir.start_with?("/var/run/") -%>
+RuntimeDirectory=<%= @sentinel_run_dir.sub(/^\/var\/run\//, "") %>
+<% else -%>
 ExecStartPre=/bin/mkdir -p <%= @sentinel_run_dir %>
 ExecStartPre=/bin/chown <%= @sentinel_user %>:<%= @sentinel_group or 'root' %> <%= @sentinel_run_dir %>
+<% end -%>
 <% else -%>
 ExecStartPre=/bin/mkdir -p <%= @sentinel_run_dir %>
 <% end -%>
@@ -19,4 +25,3 @@ Group=<%= @sentinel_group or 'root' %>
 
 [Install]
 WantedBy=multi-user.target
-

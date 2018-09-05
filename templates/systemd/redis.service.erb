@@ -5,8 +5,14 @@ After=network.target
 [Service]
 <% if @redis_user and @redis_user != 'root' -%>
 PermissionsStartOnly=true
+<% if @redis_run_dir.start_with?("/run/") -%>
+RuntimeDirectory=<%= @redis_run_dir.sub(/^\/run\//, "") %>
+<% elsif @redis_run_dir.start_with?("/var/run/") -%>
+RuntimeDirectory=<%= @redis_run_dir.sub(/^\/var\/run\//, "") %>
+<% else -%>
 ExecStartPre=/bin/mkdir -p <%= @redis_run_dir %>
 ExecStartPre=/bin/chown <%= @redis_user %>:<%= @redis_group or 'root' %> <%= @redis_run_dir %>
+<% end -%>
 <% else -%>
 ExecStartPre=/bin/mkdir -p <%= @redis_run_dir %>
 <% end -%>
