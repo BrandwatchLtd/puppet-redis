@@ -51,6 +51,12 @@
 # [*aof_rewrite_minsize*]
 #   Configure the minimum size in mb of the aof file to trigger size comparisons for rewriting.
 #   Default: 64 (integer)
+# [*aof_load_truncated*]
+#   Allow Redis to start even if it loaded a truncated AOF (eg. after a crash).
+#   Default: undef
+# [*aof_use_rdb_preamble*]
+#   Write an RDB preamble in the AOF file for faster rewrites and recoveries.
+#   Default: undef
 # [*redis_enabled_append_file*]
 #   Enable custom append file. Default: false
 # [*redis_append_file*]
@@ -147,6 +153,8 @@ define redis::server (
   $appendfsync_on_rewrite        = false,
   $aof_rewrite_percentage        = 100,
   $aof_rewrite_minsize           = 64,
+  $aof_load_truncated            = undef,
+  $aof_use_rdb_preamble          = undef,
   $redis_appendfsync             = 'everysec',
   $redis_enabled_append_file     = false,
   $redis_append_file             = undef,

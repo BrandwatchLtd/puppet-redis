@@ -467,10 +467,53 @@ no-appendfsync-on-rewrite <% if @appendfsync_on_rewrite -%> yes <% else -%>no<% 
 # Specify a precentage of zero in order to disable the automatic AOF
 # rewrite feature.
 
-
-
 auto-aof-rewrite-percentage <%= @aof_rewrite_percentage %>
 auto-aof-rewrite-min-size <%= @aof_rewrite_minsize %>
+
+#### START
+# Added in Redis 4
+
+# An AOF file may be found to be truncated at the end during the Redis
+# startup process, when the AOF data gets loaded back into memory.
+# This may happen when the system where Redis is running
+# crashes, especially when an ext4 filesystem is mounted without the
+# data=ordered option (however this can't happen when Redis itself
+# crashes or aborts but the operating system still works correctly).
+#
+# Redis can either exit with an error when this happens, or load as much
+# data as possible (the default now) and start if the AOF file is found
+# to be truncated at the end. The following option controls this behavior.
+#
+# If aof-load-truncated is set to yes, a truncated AOF file is loaded and
+# the Redis server starts emitting a log to inform the user of the event.
+# Otherwise if the option is set to no, the server aborts with an error
+# and refuses to start. When the option is set to no, the user requires
+# to fix the AOF file using the "redis-check-aof" utility before to restart
+# the server.
+#
+# Note that if the AOF file will be found to be corrupted in the middle
+# the server will still exit with an error. This option only applies when
+# Redis will try to read more data from the AOF file but not enough bytes
+# will be found.
+#aof-load-truncated yes
+<% if @aof_load_truncated -%>aof-load-truncated <%= @aof_load_truncated %><% end -%>
+
+# When rewriting the AOF file, Redis is able to use an RDB preamble in the
+# AOF file for faster rewrites and recoveries. When this option is turned
+# on the rewritten AOF file is composed of two different stanzas:
+#
+#   [RDB file][AOF tail]
+#
+# When loading Redis recognizes that the AOF file starts with the "REDIS"
+# string and loads the prefixed RDB file, and continues loading the AOF
+# tail.
+#
+# This is currently turned off by default in order to avoid the surprise
+# of a format change, but will at some point be used as the default.
+#aof-use-rdb-preamble no
+<% if @aof_use_rdb_preamble -%>aof-use-rdb-preamble <%= @aof_use_rdb_preamble %><% end -%>
+
+#### END
 
 ################################ LUA SCRIPTING  ###############################
 
