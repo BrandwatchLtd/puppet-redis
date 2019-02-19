@@ -124,6 +124,32 @@
 #   By default Redis Cluster nodes stop accepting queries if they detect there
 #   is at least an hash slot uncovered.
 #
+# [*systemd_limitnofiles*]
+#   Sets LimitNOFILES in the Redis SystemD unit file. Default: undef
+#
+# [*lazyfree_lazy_eviction*]
+#   New in Redis 4. Asynchronously evicts keys. Default: undef (yes/no)
+#   DO NOT SET FOR REDIS verion 3.x or older
+#   
+# [*lazyfree_lazy_expire*]
+#   New in Redis 4. Asynchronously deletes expired keys. Default: undef (yes/no)
+#   DO NOT SET FOR REDIS verion 3.x or older
+#
+# [*lazyfree_lazy_server_del*]
+#   New in Redis 4. Uses the asynchronous deletion function in the case of implicit
+#   deletion. Default: undef (yes/no)
+#   DO NOT SET FOR REDIS verion 3.x or older
+#
+# [*slave_lazy_flush*]
+#   New in Redis 4. In the case of full data synchronization, the slave
+#   asynchronously clears all DBs. Default: undef (yes/no)
+#   DO NOT SET FOR REDIS verion 3.x or older
+#
+# [*always_show_logo*]
+#   New in Redis 4. A way to restore Redis 3 feature to always print logo in logs
+#   on service start/restart. Default: undef (yes/no)
+#   DO NOT SET FOR REDIS verion 3.x or older
+#
 # [*include*]
 #   Array of extra configs to include Example: [ '/etc/redis/local.conf' ]
 
