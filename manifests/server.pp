@@ -79,6 +79,10 @@
 #   Configure Redis replication ping slave period
 # [*repl_backlog_size*]
 #   Replication backlog size (in bytes or multiples). Default: undef
+# [*repl_diskless_sync*]
+#   Experimental. Avoid saving a RDB file on disk on the master for full sync operation when a slave connects. Instead the RDB dump is sent immediately over the network to the slave. (yes or no). Default: undef
+# [*repl_diskless_sync_delay*]
+#   Experimental. Time to delay the diskless replication operation to allow more slaves to connect and get it in parallel (in seconds). Default: undef
 # [*save*]
 #   Configure Redis save snapshotting. Example: [[900, 1], [300, 10]]. Default: []
 # [*hash_max_ziplist_entries*]
@@ -193,6 +197,8 @@ define redis::server (
   $repl_timeout                  = 60,
   $repl_ping_slave_period        = 10,
   $repl_backlog_size             = undef,
+  $repl_diskless_sync            = undef,
+  $repl_diskless_sync_delay      = undef,
   $save                          = [],
   $hash_max_ziplist_entries      = 512,
   $hash_max_ziplist_value        = 64,
