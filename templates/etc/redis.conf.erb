@@ -80,6 +80,18 @@ logfile <%= @redis_log_dir %>/redis_<%= @redis_name %>.log
 # dbid is a number between 0 and 'databases'-1
 databases <%= @redis_nr_dbs %>
 
+#### START
+# Added in Redis 4
+# By default Redis shows an ASCII art logo only when started to log to the
+# standard output and if the standard output is a TTY. Basically this means
+# that normally a logo is displayed only in interactive sessions.
+#
+# However it is possible to force the pre-4.0 behavior and always show a
+# ASCII art logo in startup logs by setting the following option to yes.
+<% if @always_show_logo -%>always-show-logo <%= @always_show_logo %><% end -%>
+
+#### END
+
 ################################ SNAPSHOTTING  #################################
 #
 # Save the DB on disk:
@@ -169,6 +181,56 @@ slave-serve-stale-data <% if @slave_serve_stale_data -%>yes<% else -%>no<% end -
 <% if @redis_2_6_or_greater -%>
 slave-read-only <% if @slave_read_only -%>yes<% else -%>no<% end -%>
 <% end -%>
+
+#### START
+# Added in Redis 4
+
+# Replication SYNC strategy: disk or socket.
+#
+# -------------------------------------------------------
+# WARNING: DISKLESS REPLICATION IS EXPERIMENTAL CURRENTLY
+# -------------------------------------------------------
+#
+# New slaves and reconnecting slaves that are not able to continue the replication
+# process just receiving differences, need to do what is called a "full
+# synchronization". An RDB file is transmitted from the master to the slaves.
+# The transmission can happen in two different ways:
+#
+# 1) Disk-backed: The Redis master creates a new process that writes the RDB
+#                 file on disk. Later the file is transferred by the parent
+#                 process to the slaves incrementally.
+# 2) Diskless: The Redis master creates a new process that directly writes the
+#              RDB file to slave sockets, without touching the disk at all.
+#
+# With disk-backed replication, while the RDB file is generated, more slaves
+# can be queued and served with the RDB file as soon as the current child producing
+# the RDB file finishes its work. With diskless replication instead once
+# the transfer starts, new slaves arriving will be queued and a new transfer
+# will start when the current one terminates.
+#
+# When diskless replication is used, the master waits a configurable amount of
+# time (in seconds) before starting the transfer in the hope that multiple slaves
+# will arrive and the transfer can be parallelized.
+#
+# With slow disks and fast (large bandwidth) networks, diskless replication
+# works better.
+#repl-diskless-sync no
+<% if @repl_diskless_sync -%>repl-diskless-sync <%= @repl_diskless_sync %><% end -%>
+
+# When diskless replication is enabled, it is possible to configure the delay
+# the server waits in order to spawn the child that transfers the RDB via socket
+# to the slaves.
+#
+# This is important since once the transfer starts, it is not possible to serve
+# new slaves arriving, that will be queued for the next RDB transfer, so the server
+# waits a delay in order to let more slaves arrive.
+#
+# The delay is specified in seconds, and by default is 5 seconds. To disable
+# it entirely just set it to 0 seconds and the transfer will start ASAP.
+#repl-diskless-sync-delay 5
+<% if @repl_diskless_sync_delay -%>repl-diskless-sync-delay <%= @repl_diskless_sync_delay %><% end -%>
+
+#### END
 
 # Slaves send PINGs to server in a predefined interval. It's possible to change
 # this interval with the repl_ping_slave_period option. The default value is 10
@@ -280,7 +342,7 @@ rename-command <%= command %> ""
 # errors for write operations, and this may even lead to DB inconsistency.
 #
 # maxmemory <bytes>
-maxmemory <%= @redis_memory %>
+<% if @redis_memory -%>maxmemory <%= @redis_memory %><% end -%>
 
 # MAXMEMORY POLICY: how Redis will select what to remove when maxmemory
 # is reached? You can select among five behavior:
@@ -314,6 +376,60 @@ maxmemory-policy <%= @redis_mempolicy %>
 #
 # maxmemory-samples 3
 maxmemory-samples <%= @redis_memsamples %>
+
+
+#### START
+# Added in Redis 4
+############################# LAZY FREEING ####################################
+
+# Redis has two primitives to delete keys. One is called DEL and is a blocking
+# deletion of the object. It means that the server stops processing new commands
+# in order to reclaim all the memory associated with an object in a synchronous
+# way. If the key deleted is associated with a small object, the time needed
+# in order to execute the DEL command is very small and comparable to most other
+# O(1) or O(log_N) commands in Redis. However if the key is associated with an
+# aggregated value containing millions of elements, the server can block for
+# a long time (even seconds) in order to complete the operation.
+#
+# For the above reasons Redis also offers non blocking deletion primitives
+# such as UNLINK (non blocking DEL) and the ASYNC option of FLUSHALL and
+# FLUSHDB commands, in order to reclaim memory in background. Those commands
+# are executed in constant time. Another thread will incrementally free the
+# object in the background as fast as possible.
+#
+# DEL, UNLINK and ASYNC option of FLUSHALL and FLUSHDB are user-controlled.
+# It's up to the design of the application to understand when it is a good
+# idea to use one or the other. However the Redis server sometimes has to
+# delete keys or flush the whole database as a side effect of other operations.
+# Specifically Redis deletes objects independently of a user call in the
+# following scenarios:
+#
+# 1) On eviction, because of the maxmemory and maxmemory policy configurations,
+#    in order to make room for new data, without going over the specified
+#    memory limit.
+# 2) Because of expire: when a key with an associated time to live (see the
+#    EXPIRE command) must be deleted from memory.
+# 3) Because of a side effect of a command that stores data on a key that may
+#    already exist. For example the RENAME command may delete the old key
+#    content when it is replaced with another one. Similarly SUNIONSTORE
+#    or SORT with STORE option may delete existing keys. The SET command
+#    itself removes any old content of the specified key in order to replace
+#    it with the specified string.
+# 4) During replication, when a slave performs a full resynchronization with
+#    its master, the content of the whole database is removed in order to
+#    load the RDB file just transfered.
+#
+# In all the above cases the default is to delete objects in a blocking way,
+# like if DEL was called. However you can configure each case specifically
+# in order to instead release memory in a non-blocking way like if UNLINK
+# was called, using the following configuration directives:
+
+<% if @lazyfree_lazy_eviction -%>lazyfree-lazy-eviction <%= @lazyfree_lazy_eviction %><% end %>
+<% if @lazyfree_lazy_expire -%>lazyfree-lazy-expire <%= @lazyfree_lazy_expire %><% end %>
+<% if @lazyfree_lazy_server_del -%>lazyfree-lazy-server-del <%= @lazyfree_lazy_server_del %><% end %>
+<% if @slave_lazy_flush -%>slave-lazy-flush <%= @slave_lazy_flush %><% end %>
+
+#### END
 
 ############################## APPEND ONLY MODE ###############################
 
@@ -401,10 +517,53 @@ no-appendfsync-on-rewrite <% if @appendfsync_on_rewrite -%> yes <% else -%>no<% 
 # Specify a precentage of zero in order to disable the automatic AOF
 # rewrite feature.
 
-
-
 auto-aof-rewrite-percentage <%= @aof_rewrite_percentage %>
 auto-aof-rewrite-min-size <%= @aof_rewrite_minsize %>
+
+#### START
+# Added in Redis 4
+
+# An AOF file may be found to be truncated at the end during the Redis
+# startup process, when the AOF data gets loaded back into memory.
+# This may happen when the system where Redis is running
+# crashes, especially when an ext4 filesystem is mounted without the
+# data=ordered option (however this can't happen when Redis itself
+# crashes or aborts but the operating system still works correctly).
+#
+# Redis can either exit with an error when this happens, or load as much
+# data as possible (the default now) and start if the AOF file is found
+# to be truncated at the end. The following option controls this behavior.
+#
+# If aof-load-truncated is set to yes, a truncated AOF file is loaded and
+# the Redis server starts emitting a log to inform the user of the event.
+# Otherwise if the option is set to no, the server aborts with an error
+# and refuses to start. When the option is set to no, the user requires
+# to fix the AOF file using the "redis-check-aof" utility before to restart
+# the server.
+#
+# Note that if the AOF file will be found to be corrupted in the middle
+# the server will still exit with an error. This option only applies when
+# Redis will try to read more data from the AOF file but not enough bytes
+# will be found.
+#aof-load-truncated yes
+<% if @aof_load_truncated -%>aof-load-truncated <%= @aof_load_truncated %><% end -%>
+
+# When rewriting the AOF file, Redis is able to use an RDB preamble in the
+# AOF file for faster rewrites and recoveries. When this option is turned
+# on the rewritten AOF file is composed of two different stanzas:
+#
+#   [RDB file][AOF tail]
+#
+# When loading Redis recognizes that the AOF file starts with the "REDIS"
+# string and loads the prefixed RDB file, and continues loading the AOF
+# tail.
+#
+# This is currently turned off by default in order to avoid the surprise
+# of a format change, but will at some point be used as the default.
+#aof-use-rdb-preamble no
+<% if @aof_use_rdb_preamble -%>aof-use-rdb-preamble <%= @aof_use_rdb_preamble %><% end -%>
+
+#### END
 
 ################################ LUA SCRIPTING  ###############################
 

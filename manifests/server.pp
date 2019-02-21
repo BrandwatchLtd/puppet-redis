@@ -51,6 +51,12 @@
 # [*aof_rewrite_minsize*]
 #   Configure the minimum size in mb of the aof file to trigger size comparisons for rewriting.
 #   Default: 64 (integer)
+# [*aof_load_truncated*]
+#   Allow Redis to start even if it loaded a truncated AOF (eg. after a crash).
+#   Default: undef
+# [*aof_use_rdb_preamble*]
+#   Write an RDB preamble in the AOF file for faster rewrites and recoveries.
+#   Default: undef
 # [*redis_enabled_append_file*]
 #   Enable custom append file. Default: false
 # [*redis_append_file*]
@@ -73,6 +79,10 @@
 #   Configure Redis replication ping slave period
 # [*repl_backlog_size*]
 #   Replication backlog size (in bytes or multiples). Default: undef
+# [*repl_diskless_sync*]
+#   Experimental. Avoid saving a RDB file on disk on the master for full sync operation when a slave connects. Instead the RDB dump is sent immediately over the network to the slave. (yes or no). Default: undef
+# [*repl_diskless_sync_delay*]
+#   Experimental. Time to delay the diskless replication operation to allow more slaves to connect and get it in parallel (in seconds). Default: undef
 # [*save*]
 #   Configure Redis save snapshotting. Example: [[900, 1], [300, 10]]. Default: []
 # [*hash_max_ziplist_entries*]
@@ -118,12 +128,38 @@
 #   By default Redis Cluster nodes stop accepting queries if they detect there
 #   is at least an hash slot uncovered.
 #
+# [*systemd_limitnofiles*]
+#   Sets LimitNOFILES in the Redis SystemD unit file. Default: undef
+#
+# [*lazyfree_lazy_eviction*]
+#   New in Redis 4. Asynchronously evicts keys. Default: undef (yes/no)
+#   DO NOT SET FOR REDIS verion 3.x or older
+#   
+# [*lazyfree_lazy_expire*]
+#   New in Redis 4. Asynchronously deletes expired keys. Default: undef (yes/no)
+#   DO NOT SET FOR REDIS verion 3.x or older
+#
+# [*lazyfree_lazy_server_del*]
+#   New in Redis 4. Uses the asynchronous deletion function in the case of implicit
+#   deletion. Default: undef (yes/no)
+#   DO NOT SET FOR REDIS verion 3.x or older
+#
+# [*slave_lazy_flush*]
+#   New in Redis 4. In the case of full data synchronization, the slave
+#   asynchronously clears all DBs. Default: undef (yes/no)
+#   DO NOT SET FOR REDIS verion 3.x or older
+#
+# [*always_show_logo*]
+#   New in Redis 4. A way to restore Redis 3 feature to always print logo in logs
+#   on service start/restart. Default: undef (yes/no)
+#   DO NOT SET FOR REDIS verion 3.x or older
+#
 # [*include*]
 #   Array of extra configs to include Example: [ '/etc/redis/local.conf' ]
 
 define redis::server (
   $redis_name                    = $name,
-  $redis_memory                  = '100mb',
+  $redis_memory                  = undef,
   $redis_ip                      = '127.0.0.1',
   $redis_port                    = 6379,
   $redis_usesocket               = false,
@@ -147,6 +183,8 @@ define redis::server (
   $appendfsync_on_rewrite        = false,
   $aof_rewrite_percentage        = 100,
   $aof_rewrite_minsize           = 64,
+  $aof_load_truncated            = undef,
+  $aof_use_rdb_preamble          = undef,
   $redis_appendfsync             = 'everysec',
   $redis_enabled_append_file     = false,
   $redis_append_file             = undef,
@@ -159,6 +197,8 @@ define redis::server (
   $repl_timeout                  = 60,
   $repl_ping_slave_period        = 10,
   $repl_backlog_size             = undef,
+  $repl_diskless_sync            = undef,
+  $repl_diskless_sync_delay      = undef,
   $save                          = [],
   $hash_max_ziplist_entries      = 512,
   $hash_max_ziplist_value        = 64,
@@ -171,6 +211,12 @@ define redis::server (
   $cluster_require_full_coverage = true,
   $protected_mode                = undef,
   $include                       = [],
+  $systemd_limitnofiles          = undef,
+  $lazyfree_lazy_eviction        = undef,
+  $lazyfree_lazy_expire          = undef,
+  $lazyfree_lazy_server_del      = undef,
+  $slave_lazy_flush              = undef,
+  $always_show_logo              = undef,
 ) {
   include redis::install
 
