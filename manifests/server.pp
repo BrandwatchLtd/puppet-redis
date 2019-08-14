@@ -156,6 +156,11 @@
 #
 # [*include*]
 #   Array of extra configs to include Example: [ '/etc/redis/local.conf' ]
+#
+# [*redis_check_aof_fix*]
+#   Boolean flag to force the execution of command "redis-check-aof --fix /path/to/appendonly.aof".
+#   Default: false
+#
 
 define redis::server (
   $redis_name                    = $name,
@@ -217,6 +222,7 @@ define redis::server (
   $lazyfree_lazy_server_del      = undef,
   $slave_lazy_flush              = undef,
   $always_show_logo              = undef,
+  $redis_check_aof_fix           = false,
 ) {
   include redis::install
 
